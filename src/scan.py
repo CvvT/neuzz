@@ -34,6 +34,19 @@ def isLog(insn):
         return False
     return True
 
+def isCmp(insn):
+    if insn.mnemonic != "cmp":
+        return False
+    if len(insn.operands) != 2:
+        return False
+    if insn.operands[0].type != X86_OP_REG:
+        return False
+    if insn.reg_name(insn.operands[0].value.reg) != "rcx":
+        return False
+    if insn.operands[1].type != X86_OP_IMM:
+        return False
+    return True
+
 cur = start
 cur_rcx = 0
 while cur < end:
@@ -42,6 +55,8 @@ while cur < end:
     for insn in block.capstone.insns:
         if isIdinsn(insn):
             cur_rcx = insn.operands[1].value.imm
+        if isCmp(insn):
+            print("Cmp rcx %c" % chr(insn.operands[1].value.imm))
         if isLog(insn):
             print("0x%x: %x" % (insn.address, cur_rcx))
 			

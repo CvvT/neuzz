@@ -12,62 +12,70 @@ int main(int argc, char *argv[]) {
   fgets(str, N+1, stdin);
   len = strlen(str);
 
-  
-
   if (len < 0 + 1) {
     return 1;
   }
 
+  // id=0x651c
   if (str[0] != 'x') {
   	printf("failed 0\n");
   	return 1;
   }
 
-
+  // id=0x3439
   if (len < 1 + 1) {
     return 1;
   }
 
+  // id=0x6890
   if (str[1] != 'h') {
+    // id=0x7e8e
   	printf("failed 1\n");
   	return 1;
   }
 
-
+  // id=0xcd16
   if (len < 2 + 1) {
     return 1;
   }
 
+  // id=0xafab
   if (str[2] != 'q') {
+    // id=0x3c5b
   	printf("failed 2\n");
   	return 1;
   }
 
-
+  // id=0x575c
   if (len < 3 + 1) {
     return 1;
   }
 
+  // id=0xb90e
   if (str[3] != 'q') {
+    // id=0xa81b
   	printf("failed 3\n");
   	return 1;
   }
 
-
+  // id=0x79e7
   if (len < 4 + 1) {
     return 1;
   }
 
+  // id=0xec3f
   if (str[4] != 'e') {
+    // id=0xe5fe
   	printf("failed 4\n");
   	return 1;
   }
 
-
+  // id=0xe614
   if (len < 5 + 1) {
     return 1;
   }
 
+  // id=0xb9ed
   if (str[5] != 'v') {
   	printf("failed 5\n");
   	return 1;
