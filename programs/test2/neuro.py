@@ -99,6 +99,9 @@ def process_data():
             if int(j) in label:
                 bitmap[idx][label.index((int(j)))] = 1
 
+    with open("label.txt", "w") as f:
+        for edge, num in counter:
+            f.write("%s, " % (edge))
     # label dimension reduction
     # edges come together are duplicated
     np.savetxt("bitmap.out", bitmap, fmt="%d")

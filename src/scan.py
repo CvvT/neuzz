@@ -39,16 +39,17 @@ def isCmp(insn):
         return False
     if len(insn.operands) != 2:
         return False
-    if insn.operands[0].type != X86_OP_REG:
-        return False
-    if insn.reg_name(insn.operands[0].value.reg) != "rcx":
-        return False
     if insn.operands[1].type != X86_OP_IMM:
         return False
-    return True
+    value = insn.operands[1].value.imm
+    if ord('a') <= value <= ord('z'):
+        return True
+    return False
 
 cur = start
 cur_rcx = 0
+last_loc = 0
+iteration = 1
 while cur < end:
     block = proj.factory.block(cur)
     cur += block.size
@@ -56,7 +57,9 @@ while cur < end:
         if isIdinsn(insn):
             cur_rcx = insn.operands[1].value.imm
         if isCmp(insn):
-            print("Cmp rcx %c" % chr(insn.operands[1].value.imm))
+            print("%d: Cmp %c" % (iteration, chr(insn.operands[1].value.imm)))
+            iteration += 1
         if isLog(insn):
-            print("0x%x: %x" % (insn.address, cur_rcx))
+            print("0x%x: %04x ID: %06d" % (insn.address, cur_rcx, (last_loc>>1)^cur_rcx))
+            last_loc = cur_rcx
 			
