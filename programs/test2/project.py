@@ -155,7 +155,7 @@ def train(model):
 
 train(model)
 
-def vectorize_file(fl, isfile):
+def vectorize_file(fl, isfile, vectorize=True):
     seed = np.zeros((1,MAX_FILE_SIZE))
     if isfile:
         tmp = open(fl,'r').read()
@@ -165,7 +165,8 @@ def vectorize_file(fl, isfile):
     if ln < MAX_FILE_SIZE:
         tmp = tmp + (MAX_FILE_SIZE - ln) * '\0'
     seed[0] = [ord(j) for j in list(tmp)]
-    seed = seed.astype('float32')/255
+    if vectorize:
+        seed = seed.astype('float32')/255
     return seed
 
 def gradient(model, edge, seed, isfile):
