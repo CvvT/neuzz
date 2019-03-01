@@ -92,6 +92,8 @@ typedef unsigned long long u64;
 typedef uint64_t u64;
 #endif /* ^__x86_64__ */
 
+char *mutated_file;
+
 unsigned long total_execs;              /* Total number of execs */
 static int shm_id;                      /* ID of the SHM region */
 static int mem_limit  = 1024;           /* Maximum memory limit for target program */
@@ -116,6 +118,7 @@ static int out_fd,                      /* Persistent fd for out_file       */
            dev_null_fd = -1,            /* Persistent fd for /dev/null      */
            fsrv_ctl_fd,                 /* Fork server control pipe (write) */
            fsrv_st_fd;                  /* Fork server status pipe (read)   */
+static FILE *log_fd;
 static int forksrv_pid,                 /* PID of the fork server           */
            child_pid = -1,              /* PID of the fuzzed program        */
            out_dir_fd = -1;             /* FD of the lock file              */
@@ -1204,6 +1207,8 @@ void gen_mutate(){
             if (fault != 0){
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                          mutated_file, iter, step, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf1, len, mut_fn);
                     free(mut_fn);
@@ -1215,6 +1220,8 @@ void gen_mutate(){
                     fault = run_target(1000); 
                     if(fault == FAULT_CRASH){
                         char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                        fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                            mutated_file, iter, step, mut_fn);
                         int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                         ck_write(mut_fd, out_buf1, len, mut_fn);
                         free(mut_fn);
@@ -1227,6 +1234,8 @@ void gen_mutate(){
             int ret = has_new_bits(virgin_bits);
             if(ret == 2){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d_cov", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New cov-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf1, len, mut_fn);
                 free(mut_fn);
@@ -1235,13 +1244,15 @@ void gen_mutate(){
             }
             if(ret == 1){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New hit count-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf1, len, mut_fn);
                 free(mut_fn);
                 close(mut_fd);
                 mut_cnt = mut_cnt + 1;
             }
-            
+            fflush(log_fd);
         }
         
         /* low direction mutation(up to 255) */
@@ -1261,6 +1272,8 @@ void gen_mutate(){
             if (fault != 0){
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                        mutated_file, iter, step, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf2, len, mut_fn);
                     free(mut_fn);
@@ -1272,6 +1285,8 @@ void gen_mutate(){
                     fault = run_target(1000); 
                     if(fault == FAULT_CRASH){
                         char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                        fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                          mutated_file, iter, step, mut_fn);
                         int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                         ck_write(mut_fd, out_buf2, len, mut_fn);
                         free(mut_fn);
@@ -1285,6 +1300,8 @@ void gen_mutate(){
             int ret = has_new_bits(virgin_bits);
             if(ret == 2){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d_cov", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New cov-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf2, len, mut_fn);
                 close(mut_fd);
@@ -1293,13 +1310,15 @@ void gen_mutate(){
             }
             if(ret == 1){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New hit count-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf2, len, mut_fn);
                 close(mut_fd);
                 free(mut_fn);
                 mut_cnt = mut_cnt + 1;
             }
-            
+            fflush(log_fd);
         }
     }
     
@@ -1323,6 +1342,8 @@ void gen_mutate(){
         if (fault != 0){
             if(fault == FAULT_CRASH){
                 char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                fprintf(log_fd, "New crash-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                    mutated_file, del_count, cut_len, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf1, len-cut_len, mut_fn);
                 free(mut_fn);
@@ -1334,6 +1355,8 @@ void gen_mutate(){
                 fault = run_target(1000); 
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                        mutated_file, del_count, cut_len, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf1, len - cut_len, mut_fn);
                     free(mut_fn);
@@ -1347,6 +1370,8 @@ void gen_mutate(){
         int ret = has_new_bits(virgin_bits);
         if(ret==2){
             char* mut_fn = alloc_printf("%s/id_%d_%06d_cov", out_dir,round_cnt, mut_cnt);
+            fprintf(log_fd, "New cov-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                    mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf1, len-cut_len, mut_fn);
             free(mut_fn);
@@ -1355,6 +1380,8 @@ void gen_mutate(){
         }
         else if(ret==1){
             char* mut_fn = alloc_printf("%s/id_%d_%06d", out_dir,round_cnt, mut_cnt);
+            fprintf(log_fd, "New hit count-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf1, len-cut_len, mut_fn);
             free(mut_fn);
@@ -1376,6 +1403,8 @@ void gen_mutate(){
         if (fault != 0){
             if(fault == FAULT_CRASH){
                 char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                fprintf(log_fd, "New crash-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                    mutated_file, del_count, cut_len, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf3, len+cut_len, mut_fn);
                 free(mut_fn);
@@ -1387,6 +1416,8 @@ void gen_mutate(){
                 fault = run_target(1000); 
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                        mutated_file, del_count, cut_len, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf3, len + cut_len, mut_fn);
                     free(mut_fn);
@@ -1400,6 +1431,8 @@ void gen_mutate(){
         ret = has_new_bits(virgin_bits);
         if(ret == 2){
             char* mut_fn = alloc_printf("%s/id_%d_%06d_cov", "vari_seeds",round_cnt, mut_cnt);
+            fprintf(log_fd, "New cov-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf3, len+cut_len, mut_fn);
             free(mut_fn);
@@ -1408,12 +1441,15 @@ void gen_mutate(){
         }
         else if(ret == 1){
             char* mut_fn = alloc_printf("%s/id_%d_%06d", "vari_seeds",round_cnt, mut_cnt);
+            fprintf(log_fd, "New hit count-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf3, len+cut_len, mut_fn);
             free(mut_fn);
             close(mut_fd);
             mut_cnt = mut_cnt + 1;
         }
+        fflush(log_fd);
     }
 }
 
@@ -1470,6 +1506,8 @@ void gen_mutate_slow(){
             if (fault != 0){
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                      mutated_file, iter, step, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf1, len, mut_fn);
                     free(mut_fn);
@@ -1481,6 +1519,8 @@ void gen_mutate_slow(){
                     fault = run_target(1000); 
                     if(fault == FAULT_CRASH){
                         char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                        fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                          mutated_file, iter, step, mut_fn);
                         int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                         ck_write(mut_fd, out_buf1, len, mut_fn);
                         free(mut_fn);
@@ -1494,6 +1534,8 @@ void gen_mutate_slow(){
             int ret = has_new_bits(virgin_bits);
             if(ret == 2){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d_cov", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New cov-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf1, len, mut_fn);
                 free(mut_fn);
@@ -1502,13 +1544,15 @@ void gen_mutate_slow(){
             }
             if(ret == 1){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New hit count-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf1, len, mut_fn);
                 free(mut_fn);
                 close(mut_fd);
                 mut_cnt = mut_cnt + 1;
             }
-            
+            fflush(log_fd);
         }
         
         /* low direction mutation(up to 255) */
@@ -1528,6 +1572,8 @@ void gen_mutate_slow(){
             if (fault != 0){
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                        mutated_file, iter, step, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf2, len, mut_fn);
                     free(mut_fn);
@@ -1539,6 +1585,8 @@ void gen_mutate_slow(){
                     fault = run_target(1000); 
                     if(fault == FAULT_CRASH){
                         char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                        fprintf(log_fd, "New crash-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                            mutated_file, iter, step, mut_fn);
                         int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                         ck_write(mut_fd, out_buf2, len, mut_fn);
                         free(mut_fn);
@@ -1552,6 +1600,8 @@ void gen_mutate_slow(){
             int ret = has_new_bits(virgin_bits);
             if(ret == 2){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d_cov", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New cov-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf2, len, mut_fn);
                 close(mut_fd);
@@ -1560,13 +1610,15 @@ void gen_mutate_slow(){
             }
             if(ret == 1){
                 char* mut_fn = alloc_printf("%s/id_%d_%d_%06d", out_dir, round_cnt, iter, mut_cnt);
+                fprintf(log_fd, "New hit count-- file: %s, iter: %d, step: %d, tgt: %s\n", 
+                    mutated_file, iter, step, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf2, len, mut_fn);
                 close(mut_fd);
                 free(mut_fn);
                 mut_cnt = mut_cnt + 1;
             }
-            
+            fflush(log_fd);
         }
     }
     
@@ -1590,6 +1642,8 @@ void gen_mutate_slow(){
         if (fault != 0){
             if(fault == FAULT_CRASH){
                 char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                fprintf(log_fd, "New crash-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                    mutated_file, del_count, cut_len, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf1, len-cut_len, mut_fn);
                 free(mut_fn);
@@ -1601,6 +1655,8 @@ void gen_mutate_slow(){
                 fault = run_target(1000); 
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                        mutated_file, del_count, cut_len, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf1, len - cut_len, mut_fn);
                     free(mut_fn);
@@ -1614,6 +1670,8 @@ void gen_mutate_slow(){
         int ret = has_new_bits(virgin_bits);
         if(ret==2){
             char* mut_fn = alloc_printf("%s/id_%d_%06d_cov", out_dir,round_cnt, mut_cnt);
+            fprintf(log_fd, "New cov-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf1, len-cut_len, mut_fn);
             free(mut_fn);
@@ -1622,6 +1680,8 @@ void gen_mutate_slow(){
         }
         else if(ret==1){
             char* mut_fn = alloc_printf("%s/id_%d_%06d", out_dir,round_cnt, mut_cnt);
+            fprintf(log_fd, "New hit count-- file: %s, iter: %d, cut_len: %d, tgt: %s\n", 
+                mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf1, len-cut_len, mut_fn);
             free(mut_fn);
@@ -1643,6 +1703,8 @@ void gen_mutate_slow(){
         if (fault != 0){
             if(fault == FAULT_CRASH){
                 char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                fprintf(log_fd, "New crash-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                    mutated_file, del_count, cut_len, mut_fn);
                 int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                 ck_write(mut_fd, out_buf3, len+cut_len, mut_fn);
                 free(mut_fn);
@@ -1654,6 +1716,8 @@ void gen_mutate_slow(){
                 fault = run_target(1000); 
                 if(fault == FAULT_CRASH){
                     char* mut_fn = alloc_printf("%s/crash_%d_%06d", "./crashes",round_cnt, mut_cnt);
+                    fprintf(log_fd, "New crash-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                        mutated_file, del_count, cut_len, mut_fn);
                     int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
                     ck_write(mut_fd, out_buf3, len + cut_len, mut_fn);
                     free(mut_fn);
@@ -1667,6 +1731,8 @@ void gen_mutate_slow(){
         ret = has_new_bits(virgin_bits);
         if(ret == 2){
             char* mut_fn = alloc_printf("%s/id_%d_%06d_cov", "vari_seeds",round_cnt, mut_cnt);
+            fprintf(log_fd, "New cov-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf3, len+cut_len, mut_fn);
             free(mut_fn);
@@ -1675,12 +1741,15 @@ void gen_mutate_slow(){
         }
         else if(ret == 1){
             char* mut_fn = alloc_printf("%s/id_%d_%06d", "vari_seeds",round_cnt, mut_cnt);
+            fprintf(log_fd, "New hit count-- file: %s, iter: %d, add_len: %d, tgt: %s\n", 
+                mutated_file, del_count, cut_len, mut_fn);
             int mut_fd = open(mut_fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
             ck_write(mut_fd, out_buf3, len+cut_len, mut_fn);
             free(mut_fn);
             close(mut_fd);
             mut_cnt = mut_cnt + 1;
         }
+        fflush(log_fd);
     }
 }
 
@@ -1873,8 +1942,8 @@ void fuzz_lop(char * grad_file, int sock){
         
         /* print edge coverage per 10 files*/
         if((line_cnt % 10) == 0){ 
-            printf("$$$$&&&& fuzz %s line_cnt %d\n",fn, line_cnt);
-            printf("edge num %d\n",count_non_255_bytes(virgin_bits));
+            // printf("$$$$&&&& fuzz %s line_cnt %d\n",fn, line_cnt);
+            // printf("edge num %d\n",count_non_255_bytes(virgin_bits));
             fflush(stdout);
         }
 
@@ -1892,6 +1961,7 @@ void fuzz_lop(char * grad_file, int sock){
         memset(out_buf,0, len);
         memset(out_buf3,0, 20000);
         ck_read(fn_fd, out_buf, file_len, fn);
+        mutated_file = fn;
         
         /* generate mutation */
         if(stage_num == 1)
@@ -1953,6 +2023,7 @@ void start_fuzz(int f_len){
             perror("received failed\n");
         fuzz_lop("gradient_info", sock);
         printf("receive\n");
+        fprintf(log_fd, "RECEIVE\n");
     }
     return;
 }
@@ -2041,7 +2112,15 @@ void main(int argc, char*argv[]){
     copy_seeds(in_dir, out_dir);
     init_forkserver(argv+optind);
    
+    log_fd = fopen("log.txt", "w");
+
+    if (log_fd == NULL) {
+      perror("Unable to create .cur_input");
+      return;
+    }
+
     start_fuzz(len);   
+    fclose(log_fd);
     printf("total execs %ld edge coverage %d.\n", total_execs, count_non_255_bytes(virgin_bits));
     return;
 }
